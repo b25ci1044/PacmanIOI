@@ -17,6 +17,32 @@
 
 #include "sounds.h"
 
+#include "victory_screen.h"
+
+std::vector<Powerup> spawnPowerups(float uiOffset) {
+  std::vector<Powerup> pups;
+  std::srand((unsigned)std::time(nullptr));
+  // Collect walkable positions
+  std::vector<sf::Vector2f> spots;
+  for (unsigned r = 0; r < baseMap.size(); r++) {
+    for (unsigned c = 0; c < baseMap[r].size(); c++) {
+      if (baseMap[r][c] != '#' && baseMap[r][c] != 'x' && baseMap[r][c] != '-') {
+        spots.push_back(sf::Vector2f(c * TILE_SIZE + TILE_SIZE / 2,
+                                     r * TILE_SIZE + TILE_SIZE / 2 + uiOffset));
+      }
+    }
+  }
+  // Place one of each type at random positions
+  PowerupType types[] = {PowerupType::Health, PowerupType::Power, PowerupType::Shield};
+  for (auto t : types) {
+    if (spots.empty()) break;
+    int idx = std::rand() % (int)spots.size();
+    pups.push_back({spots[idx], t, true});
+    spots.erase(spots.begin() + idx);
+  }
+  return pups;
+}
+
 int main() {
   unsigned mapW = (unsigned)baseMap[0].size();
   unsigned mapH = (unsigned)baseMap.size();
@@ -71,25 +97,24 @@ int main() {
     pacman.queuedDir = Direction::Left;
     pacman.color = sf::Color::Yellow;
     score = 0;
-    hasShield = false; shieldTimer = 0.f;
-    hasPower = false;  powerTimer = 0.f;
+    hasShield = false;
+    shieldTimer = 0.f;
+    hasPower = false;
+    powerTimer = 0.f;
     orbs = spawnOrbs(uiOffset);
-    powerups = spawnPowerups();
-  };
+    powerups = spawnPowerups(uiOffset);
+    sf::Clock clock;
+    GameState gameState = GameState::Playing;
+    float animTime = 0.f;
 
-  resetGame();
-  sf::Clock clock;
+    while (window.isOpen() && gameState == GameState::Playing) {
+      float dt = clock.restart().asSeconds();
+      if (dt > 0.1f) dt = 0.1f;
+      animTime += dt;
 
-  while (window.isOpen()) {
-    float dt = clock.restart().asSeconds();
-    if (dt > 0.1f)
-      dt = 0.1f;
-    static float animTime = 0.f;
-    animTime += dt;
-
-    while (const std::optional<sf::Event> ev = window.pollEvent())
-      if (ev->is<sf::Event::Closed>())
-        window.close();
+      while (const std::optional<sf::Event> ev = window.pollEvent())
+        if (ev->is<sf::Event::Closed>())
+          window.close();
 
     handlePacmanInput(pacman);
     moveEntity(pacman, PACMAN_SPEED, false, dt, uiOffset, mapW);
@@ -107,27 +132,26 @@ int main() {
           case PowerupType::Health:
             score += 50;  
             sPow.play();
-            break;
-          case PowerupType::Power:
+          }
+          else if (pu.type == PowerupType::Power) {
             hasPower = true;
             powerTimer = 8.0f;  
             sPow.play();
-            break;
-          case PowerupType::Shield:
+          }
+          else if (pu.type == PowerupType::Shield) {
             hasShield = true;
             shieldTimer = 10.0f;  
             sShld.play();
-            break;
+          }
         }
       }
-    }
 
     if (hasPower) { powerTimer -= dt; if (powerTimer <= 0.f) hasPower = false; }
     if (hasShield) { shieldTimer -= dt; if (shieldTimer <= 0.f) hasShield = false; }
 
-    window.clear(sf::Color::Black);
+      window.clear(sf::Color::Black);
 
-    drawArena(window, uiOffset, animTime);
+      drawArena(window, uiOffset, animTime);
 
     drawOrbs(window, orbs);
 
@@ -147,8 +171,31 @@ int main() {
 
     drawScore(window, font, score);
 
-    window.display();
+      window.display();
+    }
+
+    if (window.isOpen()) {
+      bool won = (gameState == GameState::GameWon);
+      EndScreen endScreen(font, won);
+      EndChoice choice = endScreen.run(window);
+
+      if (choice == EndChoice::PlayAgain) {
+        if (!window.isOpen()) {
+          window.create(sf::VideoMode(sf::Vector2u(
+                            mapW * (unsigned)TILE_SIZE,
+                            mapH * (unsigned)TILE_SIZE + (unsigned)uiOffset)),
+                        "Pac-Man Core");
+        }
+        continue;  
+      }
+      else {
+        keepPlaying = false;
+      }
+    }
+    else {
+      keepPlaying = false;
+    }
   }
+
   return 0;
 }
-
