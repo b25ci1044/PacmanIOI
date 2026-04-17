@@ -23,8 +23,6 @@
 // sounds wali file ko include kiya (procedural audio)
 #include "sounds.h"
 
-
-
 // ghost_visuals wali file ko include kiya (ghost rendering)
 #include "ghost_visuals.h"
 
@@ -34,7 +32,8 @@
 // victory_screen wali file ko include kiya (end screen UI)
 #include "victory_screen.h"
 
-int main() {
+int main()
+{
   unsigned mapW = (unsigned)baseMap[0].size();
   unsigned mapH = (unsigned)baseMap.size();
   const float uiOffset = 40.0f; // Leaves room at the top for score/lives UI
@@ -57,7 +56,7 @@ int main() {
   // game starts
   Entity pacman;
   std::vector<std::shared_ptr<Ghost>> ghosts = initializeGhosts(uiOffset);
-  int lives = 3;  // Starting lives
+  int lives = 3; // Starting lives
   int score = 0;
   bool hasShield = false;
   float shieldTimer = 0.f;
@@ -71,7 +70,8 @@ int main() {
   std::vector<sf::Vector2f> orbs = spawnOrbs(uiOffset);
 
   // Spawn powerups on a few random walkable tiles
-  auto spawnPowerups = [&]() -> std::vector<Powerup> {
+  auto spawnPowerups = [&]() -> std::vector<Powerup>
+  {
     std::vector<Powerup> pups;
     std::srand((unsigned)std::time(nullptr));
     // Collect walkable positions
@@ -83,8 +83,10 @@ int main() {
                                        r * TILE_SIZE + TILE_SIZE / 2 + uiOffset));
     // Place one of each type at random positions
     PowerupType types[] = {PowerupType::Health, PowerupType::Power, PowerupType::Shield};
-    for (auto t : types) {
-      if (spots.empty()) break;
+    for (auto t : types)
+    {
+      if (spots.empty())
+        break;
       int idx = std::rand() % (int)spots.size();
       pups.push_back({spots[idx], t, true});
       spots.erase(spots.begin() + idx);
@@ -93,14 +95,18 @@ int main() {
   };
   std::vector<Powerup> powerups = spawnPowerups();
 
-  auto resetGame = [&]() {
+  auto resetGame = [&]()
+  {
     pacman.pos = pacSpawn;
     pacman.currentDir = Direction::Left;
     pacman.queuedDir = Direction::Left;
     pacman.color = sf::Color::Yellow;
     score = 0;
-    hasShield = false; shieldTimer = 0.f;
-    hasPower = false;  powerTimer = 0.f;
+    lives = 3;
+    hasShield = false;
+    shieldTimer = 0.f;
+    hasPower = false;
+    powerTimer = 0.f;
     ghosts = initializeGhosts(uiOffset);
     orbs = spawnOrbs(uiOffset);
     powerups = spawnPowerups();
@@ -108,14 +114,16 @@ int main() {
 
   // Outer loop: supports Play Again functionality
   bool keepPlaying = true;
-  while (keepPlaying) {
+  while (keepPlaying)
+  {
     resetGame();
     sf::Clock clock;
     GameState gameState = GameState::Playing;
     float animTime = 0.f;
 
     // Inner loop: the actual game
-    while (window.isOpen() && gameState == GameState::Playing) {
+    while (window.isOpen() && gameState == GameState::Playing)
+    {
       float dt = clock.restart().asSeconds();
       if (dt > 0.1f)
         dt = 0.1f;
@@ -133,13 +141,15 @@ int main() {
       updateGhosts(ghosts, pacman, dt, uiOffset, animTime);
 
       bool hitByGhost = checkGhostCollision(pacman, ghosts, hasShield, hasPower, sEat, sDth, score);
-      if (hitByGhost) {
-          --lives;
-          if (lives <= 0) {
-              gameState = GameState::GameOver;
-              break;
-          }
-          pacman.pos = pacSpawn;
+      if (hitByGhost)
+      {
+        --lives;
+        if (lives <= 0)
+        {
+          gameState = GameState::GameOver;
+          break;
+        }
+        pacman.pos = pacSpawn;
       }
 
       // Collect orbs that Pac-Man touches and play blop sound
@@ -149,39 +159,58 @@ int main() {
         sBlop.play();
 
       // Win condition: all orbs collected
-      if (orbs.empty()) {
+      if (orbs.empty())
+      {
         gameState = GameState::GameWon;
         sWin.play();
         break;
       }
 
       // Powerup pickup logic
-      for (auto &pu : powerups) {
-        if (!pu.active) continue;
-        if (calcDist(pacman.pos, pu.pos) < TILE_SIZE * 0.7f) {
+      for (auto &pu : powerups)
+      {
+        if (!pu.active)
+          continue;
+        if (calcDist(pacman.pos, pu.pos) < TILE_SIZE * 0.7f)
+        {
           pu.active = false;
-          switch (pu.type) {
-            case PowerupType::Health:
-              sPow.play();
-              break;
-            case PowerupType::Power:
-              hasPower = true;
-              powerTimer = 8.0f;
-              frightenGhosts(ghosts, 8.0f);
-              sPow.play();
-              break;
-            case PowerupType::Shield:
-              hasShield = true;
-              shieldTimer = 10.0f;  // 10 sec shield visual
-              sShld.play();
-              break;
+          switch (pu.type)
+          {
+          case PowerupType::Health:
+            if (lives < 3)
+              ++lives;
+            sPow.play();
+            break;
+          case PowerupType::Power:
+            hasPower = true;
+            powerTimer = 8.0f;
+            frightenGhosts(ghosts, 8.0f);
+            sPow.play();
+            break;
+          case PowerupType::Shield:
+            hasShield = true;
+            shieldTimer = 10.0f; // 10 sec shield visual
+            sShld.play();
+            break;
           }
         }
       }
 
       // Tick powerup timers
-      if (hasPower) { powerTimer -= dt; if (powerTimer <= 0.f) { hasPower = false; } }
-      if (hasShield) { shieldTimer -= dt; if (shieldTimer <= 0.f) hasShield = false; }
+      if (hasPower)
+      {
+        powerTimer -= dt;
+        if (powerTimer <= 0.f)
+        {
+          hasPower = false;
+        }
+      }
+      if (hasShield)
+      {
+        shieldTimer -= dt;
+        if (shieldTimer <= 0.f)
+          hasShield = false;
+      }
 
       window.clear(sf::Color::Black);
 
@@ -191,12 +220,21 @@ int main() {
       drawOrbs(window, orbs);
 
       // Draw powerups
-      for (auto &pu : powerups) {
-        if (!pu.active) continue;
-        switch (pu.type) {
-          case PowerupType::Health: drawHealthPowerup(window, pu.pos, animTime); break;
-          case PowerupType::Power:  drawPowerPowerup(window, pu.pos, animTime);  break;
-          case PowerupType::Shield: drawShieldPowerup(window, pu.pos, animTime); break;
+      for (auto &pu : powerups)
+      {
+        if (!pu.active)
+          continue;
+        switch (pu.type)
+        {
+        case PowerupType::Health:
+          drawHealthPowerup(window, pu.pos, animTime);
+          break;
+        case PowerupType::Power:
+          drawPowerPowerup(window, pu.pos, animTime);
+          break;
+        case PowerupType::Shield:
+          drawShieldPowerup(window, pu.pos, animTime);
+          break;
         }
       }
 
@@ -217,42 +255,33 @@ int main() {
     }
 
     // Show victory / game-over screen if window is still open
-    if (window.isOpen()) {
+    if (window.isOpen())
+    {
       bool won = (gameState == GameState::GameWon);
       EndScreen endScreen(font, won);
       EndChoice choice = endScreen.run(window);
 
-  auto resetGame = [&]() {
-    pacman.pos = pacSpawn;
-    pacman.currentDir = Direction::Left;
-    pacman.queuedDir = Direction::Left;
-    pacman.color = sf::Color::Yellow;
-    score = 0;
-    lives = 3;  // Reset lives
-    hasShield = false; shieldTimer = 0.f;
-    hasPower = false;  powerTimer = 0.f;
-
-    ghosts = initializeGhosts(uiOffset);
-    orbs = spawnOrbs(uiOffset);
-    powerups = spawnPowerups();
-  };  
-
-      if (choice == EndChoice::PlayAgain) {
+      if (choice == EndChoice::PlayAgain)
+      {
         // Re-open the window if it was closed by the end screen
-        if (!window.isOpen()) {
+        if (!window.isOpen())
+        {
           window.create(sf::VideoMode(sf::Vector2u(
                             mapW * (unsigned)TILE_SIZE,
                             mapH * (unsigned)TILE_SIZE + (unsigned)uiOffset)),
                         "Pac-Man Core");
         }
-        continue;  // restart the outer loop
-      } else {
+        continue; // restart the outer loop
+      }
+      else
+      {
         keepPlaying = false;
       }
     }
-     else {
+    else
+    {
       keepPlaying = false;
     }
   }
- return 0;
+  return 0;
 }
