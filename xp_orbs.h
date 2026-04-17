@@ -1,15 +1,17 @@
 #pragma once
 
-
 #include "globals.h"
 
-
-inline std::vector<sf::Vector2f> spawnOrbs(float uiOffset) {
+inline std::vector<sf::Vector2f> spawnOrbs(float uiOffset)
+{
   std::vector<sf::Vector2f> orbs;
-  for (unsigned r = 0; r < baseMap.size(); ++r) {
-    for (unsigned c = 0; c < baseMap[r].size(); ++c) {
+  for (unsigned r = 0; r < baseMap.size(); ++r)
+  {
+    for (unsigned c = 0; c < baseMap[r].size(); ++c)
+    {
       char tile = baseMap[r][c];
-      if (tile != '#' && tile != 'x' && tile != '-') {
+      if (tile != '#' && tile != 'x' && tile != '-')
+      {
         orbs.push_back(sf::Vector2f(c * TILE_SIZE + TILE_SIZE / 2,
                                     r * TILE_SIZE + TILE_SIZE / 2 + uiOffset));
       }
@@ -18,42 +20,66 @@ inline std::vector<sf::Vector2f> spawnOrbs(float uiOffset) {
   return orbs;
 }
 
-
 inline void drawOrbs(sf::RenderWindow &window,
-                     const std::vector<sf::Vector2f> &orbs) {
+                     const std::vector<sf::Vector2f> &orbs)
+{
   sf::CircleShape o(3.f);
   o.setFillColor(sf::Color::White);
   o.setOrigin({3, 3});
-  for (auto &op : orbs) {
+  for (auto &op : orbs)
+  {
     o.setPosition(op);
     window.draw(o);
   }
 }
 
+inline void drawHeart(sf::RenderWindow &window, sf::Vector2f pos, float size)
+{
+  sf::Color hc(220, 40, 80);
+  sf::CircleShape lobe(size * 0.55f);
+  lobe.setFillColor(hc);
+  lobe.setOrigin({size * 0.55f, size * 0.55f});
+
+  lobe.setPosition(pos + sf::Vector2f(-size * 0.28f, -size * 0.25f));
+  window.draw(lobe);
+  lobe.setPosition(pos + sf::Vector2f(size * 0.28f, -size * 0.25f));
+  window.draw(lobe);
+
+  sf::VertexArray tri(sf::PrimitiveType::Triangles, 3);
+  tri[0] = sf::Vertex{pos + sf::Vector2f(-size * 0.85f, -size * 0.1f), hc};
+  tri[1] = sf::Vertex{pos + sf::Vector2f(size * 0.85f, -size * 0.1f), hc};
+  tri[2] = sf::Vertex{pos + sf::Vector2f(0.0f, size * 0.85f), hc};
+  window.draw(tri);
+}
 
 inline void drawScore(sf::RenderWindow &window, const sf::Font &font,
-                      int score, int lives = -1) {
+                      int score, int lives = -1)
+{
   sf::Text sc(font, "Score: " + std::to_string(score), 24);
   sc.setFillColor(sf::Color::White);
   sc.setPosition({10, 5});
   window.draw(sc);
-  
-  // Draw lives if provided
-  if (lives >= 0) {
-    sf::Text livesText(font, "Lives: " + std::to_string(lives), 24);
-    livesText.setFillColor(sf::Color::Yellow);
-    livesText.setPosition({static_cast<float>(window.getSize().x) - 150.f, 5.f});
-    window.draw(livesText);
+
+  // Draw heart-based lives HUD if provided
+  if (lives >= 0)
+  {
+    float right = static_cast<float>(window.getSize().x);
+    for (int i = 0; i < lives; ++i)
+    {
+      drawHeart(window, {right - 22.f - (i * 22.f), 20.f}, 8.f);
+    }
   }
 }
 
-
 inline bool collectOrbs(std::vector<sf::Vector2f> &orbs,
-                        const sf::Vector2f &pacPos, int &score) {
+                        const sf::Vector2f &pacPos, int &score)
+{
   size_t before = orbs.size();
   orbs.erase(std::remove_if(orbs.begin(), orbs.end(),
-                            [&](const sf::Vector2f &o) {
-                              if (calcDist(pacPos, o) < TILE_SIZE / 2) {
+                            [&](const sf::Vector2f &o)
+                            {
+                              if (calcDist(pacPos, o) < TILE_SIZE / 2)
+                              {
                                 score++;
                                 return true;
                               }
