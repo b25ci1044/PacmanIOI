@@ -4,266 +4,300 @@
 #include <SFML/Window/Event.hpp>
 #include <iostream>
 
-// arena wali file ko include kiya
+
 #include "arena.cpp"
 #include "globals.h"
 
-// pacman_movement wali file ko include kiya
+
 #include "pacman_movement.h"
 
-// pacman_draw wali file ko include kiya (animated chomping + death animation)
+
 #include "pacman_draw.h"
 
-// xp_orbs wali file ko include kiya (orbs + score)
+
 #include "xp_orbs.h"
 
-// powerups wali file ko include kiya (powerup animations)
+
 #include "powerups.h"
 
-// sounds wali file ko include kiya (procedural audio)
+
 #include "sounds.h"
 
-// ghost_visuals wali file ko include kiya (ghost rendering)
+
 #include "ghost_visuals.h"
 
-// ghosts logic
+
 #include "ghosts.h"
 
-// victory_screen wali file ko include kiya (end screen UI)
+
 #include "victory_screen.h"
 
 int main() {
-  unsigned mapW = (unsigned)baseMap[0].size();
-  unsigned mapH = (unsigned)baseMap.size();
-  const float uiOffset = 40.0f; // Leaves room at the top for score/lives UI
+  unsigned map_width_variable = (unsigned)baseMap[0].size();
+  unsigned map_height_variable = (unsigned)baseMap.size();
+  const float ui_offset_value = 40.0f;
 
-  // Initialize main rendering window scaled by map tile sizes
+
   sf::RenderWindow window(sf::VideoMode(sf::Vector2u(
-                              mapW * (unsigned)TILE_SIZE,
-                              mapH * (unsigned)TILE_SIZE + (unsigned)uiOffset)),
+                              map_width_variable * (unsigned)TILE_SIZE,
+                              map_height_variable * (unsigned)TILE_SIZE + (unsigned)ui_offset_value)),
                           "Pac-Man Core");
 
-  // Load font for score display
   sf::Font font("C:/Windows/Fonts/arial.ttf");
 
-  // Create sound buffers and sound objects
-  sf::SoundBuffer bBlop = makeBlopSound(), bPow = makePowerupSound(),
-                  bShld = makeShieldSound(), bEat = makeGhostEatSound(),
-                  bDth = makeDeathSound(), bWin = makeWinSound();
-  sf::Sound sBlop(bBlop), sPow(bPow), sShld(bShld), sEat(bEat), sDth(bDth),
-      sWin(bWin);
+  sf::SoundBuffer blop_sound_buffer = makeBlopSound();
+  sf::SoundBuffer powerup_sound_buffer = makePowerupSound();
+  sf::SoundBuffer shield_sound_buffer = makeShieldSound();
+  sf::SoundBuffer ghost_eat_sound_buffer = makeGhostEatSound();
+  sf::SoundBuffer death_sound_buffer = makeDeathSound();
+  sf::SoundBuffer win_sound_buffer = makeWinSound();
 
-  // game starts
+  sf::Sound blop_sound(blop_sound_buffer);
+  sf::Sound powerup_sound(powerup_sound_buffer);
+  sf::Sound shield_sound(shield_sound_buffer);
+  sf::Sound ghost_eat_sound(ghost_eat_sound_buffer);
+  sf::Sound death_sound(death_sound_buffer);
+  sf::Sound win_sound(win_sound_buffer);
+
   Entity pacman;
-  std::vector<std::shared_ptr<Ghost>> ghosts = initializeGhosts(uiOffset);
-  int lives = 3; // Starting lives
-  int score = 0;
-  bool hasShield = false;
-  float shieldTimer = 0.f;
-  bool hasPower = false;
-  float powerTimer = 0.f;
-  // Starting pixel location for Pacman on spawn
-  sf::Vector2f pacSpawn(14 * TILE_SIZE + TILE_SIZE / 2,
-                        5 * TILE_SIZE + TILE_SIZE / 2 + uiOffset);
 
-  // Spawn orbs on every walkable tile
-  std::vector<sf::Vector2f> orbs = spawnOrbs(uiOffset);
+  std::vector<std::shared_ptr<Ghost>> ghosts = initializeGhosts(ui_offset_value);
 
-  // Spawn powerups on a few random walkable tiles
-  auto spawnPowerups = [&]() -> std::vector<Powerup> {
-    std::vector<Powerup> pups;
-    std::srand((unsigned)std::time(nullptr));
-    // Collect walkable positions
-    std::vector<sf::Vector2f> spots;
-    for (unsigned r = 0; r < baseMap.size(); ++r)
-      for (unsigned c = 0; c < baseMap[r].size(); ++c)
-        if (baseMap[r][c] != '#' && baseMap[r][c] != 'x' &&
-            baseMap[r][c] != '-')
-          spots.push_back(
-              sf::Vector2f(c * TILE_SIZE + TILE_SIZE / 2,
-                           r * TILE_SIZE + TILE_SIZE / 2 + uiOffset));
-    // Place one of each type at random positions
-    PowerupType types[] = {PowerupType::Health, PowerupType::Power,
-                           PowerupType::Shield};
-    for (auto t : types) {
-      if (spots.empty())
-        break;
-      int idx = std::rand() % (int)spots.size();
-      pups.push_back({spots[idx], t, true});
-      spots.erase(spots.begin() + idx);
-    }
-    return pups;
-  };
-  std::vector<Powerup> powerups = spawnPowerups();
+  int number_of_lives = 3;
+  int current_score = 0;
+  bool shield_is_active = false;
+  float shield_timer_value = 0.f;
+  bool power_is_active = false;
+  float power_timer_value = 0.f;
 
-  auto resetGame = [&]() {
-    pacman.pos = pacSpawn;
+  sf::Vector2f pacman_spawn_position;
+  pacman_spawn_position.x = 14 * TILE_SIZE + TILE_SIZE / 2;
+  pacman_spawn_position.y = 5 * TILE_SIZE + TILE_SIZE / 2 + ui_offset_value;
+
+  std::vector<sf::Vector2f> orbs = spawnOrbs(ui_offset_value);
+
+  bool keep_playing_flag = true;
+  while (keep_playing_flag == true) {
+    pacman.pos = pacman_spawn_position;
     pacman.currentDir = Direction::Left;
     pacman.queuedDir = Direction::Left;
     pacman.color = sf::Color::Yellow;
-    score = 0;
-    lives = 3;
-    hasShield = false;
-    shieldTimer = 0.f;
-    hasPower = false;
-    powerTimer = 0.f;
-    ghosts = initializeGhosts(uiOffset);
-    orbs = spawnOrbs(uiOffset);
-    powerups = spawnPowerups();
-  };
+    current_score = 0;
+    number_of_lives = 3;
+    shield_is_active = false;
+    shield_timer_value = 0.f;
+    power_is_active = false;
+    power_timer_value = 0.f;
+    ghosts = initializeGhosts(ui_offset_value);
+    orbs = spawnOrbs(ui_offset_value);
 
-  // Outer loop: supports Play Again functionality
-  bool keepPlaying = true;
-  while (keepPlaying) {
-    resetGame();
-    sf::Clock clock;
-    GameState gameState = GameState::Playing;
-    float animTime = 0.f;
+    std::vector<sf::Vector2f> valid_spawn_spots;
+    unsigned r = 0;
+    while (r < baseMap.size()) {
+      unsigned c = 0;
+      while (c < baseMap[r].size()) {
+        bool is_good_spot = true;
+        if (baseMap[r][c] == '#') { is_good_spot = false; }
+        if (baseMap[r][c] == 'x') { is_good_spot = false; }
+        if (baseMap[r][c] == '-') { is_good_spot = false; }
 
-    // Inner loop: the actual game
-    while (window.isOpen() && gameState == GameState::Playing) {
-      float dt = clock.restart().asSeconds();
-      if (dt > 0.1f)
-        dt = 0.1f;
-      animTime += dt;
-
-      while (const std::optional<sf::Event> ev = window.pollEvent())
-        if (ev->is<sf::Event::Closed>())
-          window.close();
-
-      // Take inputs for pacman
-      handlePacmanInput(pacman);
-      moveEntity(pacman, PACMAN_SPEED, dt, uiOffset, mapW);
-
-      // Update Ghosts
-      updateGhosts(ghosts, pacman, dt, uiOffset, animTime);
-
-      bool hitByGhost = checkGhostCollision(pacman, ghosts, hasShield, hasPower,
-                                            sEat, sDth, score);
-      if (hitByGhost) {
-        --lives;
-        if (lives <= 0) {
-          gameState = GameState::GameOver;
-          break;
+        if (is_good_spot == true) {
+          sf::Vector2f spot;
+          spot.x = c * TILE_SIZE + TILE_SIZE / 2;
+          spot.y = r * TILE_SIZE + TILE_SIZE / 2 + ui_offset_value;
+          valid_spawn_spots.push_back(spot);
         }
-        pacman.pos = pacSpawn;
+        c = c + 1;
+      }
+      r = r + 1;
+    }
+
+    std::srand((unsigned)std::time(nullptr));
+    std::vector<Powerup> powerups_list;
+
+    if (valid_spawn_spots.size() > 0) {
+      int random_idx = std::rand() % (int)valid_spawn_spots.size();
+      Powerup health_pu;
+      health_pu.pos = valid_spawn_spots[random_idx];
+      health_pu.type = PowerupType::Health;
+      health_pu.active = true;
+      powerups_list.push_back(health_pu);
+      valid_spawn_spots.erase(valid_spawn_spots.begin() + random_idx);
+    }
+    if (valid_spawn_spots.size() > 0) {
+      int random_idx = std::rand() % (int)valid_spawn_spots.size();
+      Powerup power_pu;
+      power_pu.pos = valid_spawn_spots[random_idx];
+      power_pu.type = PowerupType::Power;
+      power_pu.active = true;
+      powerups_list.push_back(power_pu);
+      valid_spawn_spots.erase(valid_spawn_spots.begin() + random_idx);
+    }
+    if (valid_spawn_spots.size() > 0) {
+      int random_idx = std::rand() % (int)valid_spawn_spots.size();
+      Powerup shield_pu;
+      shield_pu.pos = valid_spawn_spots[random_idx];
+      shield_pu.type = PowerupType::Shield;
+      shield_pu.active = true;
+      powerups_list.push_back(shield_pu);
+      valid_spawn_spots.erase(valid_spawn_spots.begin() + random_idx);
+    }
+
+    sf::Clock clock;
+    GameState current_game_state = GameState::Playing;
+    float animation_time = 0.f;
+
+    while (window.isOpen() && current_game_state == GameState::Playing) {
+      float dt = clock.restart().asSeconds();
+      if (dt > 0.1f) {
+        dt = 0.1f;
+      }
+      animation_time = animation_time + dt;
+
+      while (const std::optional<sf::Event> ev = window.pollEvent()) {
+        if (ev->is<sf::Event::Closed>()) {
+          window.close();
+        }
       }
 
-      // Collect orbs that Pac-Man touches and play blop sound
-      size_t orbsBefore = orbs.size();
-      collectOrbs(orbs, pacman.pos, score);
-      if (orbs.size() < orbsBefore &&
-          sBlop.getStatus() != sf::Sound::Status::Playing)
-        sBlop.play();
+      handlePacmanInput(pacman);
+      moveEntity(pacman, PACMAN_SPEED, dt, ui_offset_value, map_width_variable);
 
-      // Win condition: all orbs collected
-      if (orbs.empty()) {
-        gameState = GameState::GameWon;
-        sWin.play();
+      updateGhosts(ghosts, pacman, dt, ui_offset_value, animation_time);
+
+      bool was_hit = checkGhostCollision(pacman, ghosts, shield_is_active, power_is_active,
+                                            ghost_eat_sound, death_sound, current_score);
+      if (was_hit == true) {
+        number_of_lives = number_of_lives - 1;
+        if (number_of_lives <= 0) {
+          current_game_state = GameState::GameOver;
+          break;
+        }
+        pacman.pos = pacman_spawn_position;
+      }
+
+      int orbs_count_before = (int)orbs.size();
+      collectOrbs(orbs, pacman.pos, current_score);
+      int orbs_count_after = (int)orbs.size();
+      if (orbs_count_after < orbs_count_before) {
+        if (blop_sound.getStatus() != sf::Sound::Status::Playing) {
+          blop_sound.play();
+        }
+      }
+
+      if (orbs.size() == 0) {
+        current_game_state = GameState::GameWon;
+        win_sound.play();
         break;
       }
 
-      // Powerup pickup logic
-      for (auto &pu : powerups) {
-        if (!pu.active)
+      int pu_index = 0;
+      while (pu_index < (int)powerups_list.size()) {
+        if (powerups_list[pu_index].active == false) {
+          pu_index = pu_index + 1;
           continue;
-        if (calcDist(pacman.pos, pu.pos) < TILE_SIZE * 0.7f) {
-          pu.active = false;
-          switch (pu.type) {
-          case PowerupType::Health:
-            if (lives < 3)
-              ++lives;
-            sPow.play();
-            break;
-          case PowerupType::Power:
-            hasPower = true;
-            powerTimer = 8.0f;
-            frightenGhosts(ghosts, 8.0f);
-            sPow.play();
-            break;
-          case PowerupType::Shield:
-            hasShield = true;
-            shieldTimer = 10.0f; // 10 sec shield visual
-            sShld.play();
-            break;
+        }
+        float dist_to_powerup = calcDist(pacman.pos, powerups_list[pu_index].pos);
+        if (dist_to_powerup < TILE_SIZE * 0.7f) {
+          powerups_list[pu_index].active = false;
+
+          if (powerups_list[pu_index].type == PowerupType::Health) {
+            if (number_of_lives < 3) {
+              number_of_lives = number_of_lives + 1;
+            }
+            powerup_sound.play();
           }
+          else if (powerups_list[pu_index].type == PowerupType::Power) {
+            power_is_active = true;
+            power_timer_value = 8.0f;
+            frightenGhosts(ghosts, 8.0f);
+            powerup_sound.play();
+          }
+          else if (powerups_list[pu_index].type == PowerupType::Shield) {
+            shield_is_active = true;
+            shield_timer_value = 10.0f;
+            shield_sound.play();
+          }
+        }
+        pu_index = pu_index + 1;
+      }
+
+      if (power_is_active == true) {
+        power_timer_value = power_timer_value - dt;
+        if (power_timer_value <= 0.f) {
+          power_is_active = false;
+        }
+      }
+      if (shield_is_active == true) {
+        shield_timer_value = shield_timer_value - dt;
+        if (shield_timer_value <= 0.f) {
+          shield_is_active = false;
         }
       }
 
-      // Tick powerup timers
-      if (hasPower) {
-        powerTimer -= dt;
-        if (powerTimer <= 0.f) {
-          hasPower = false;
-        }
-      }
-      if (hasShield) {
-        shieldTimer -= dt;
-        if (shieldTimer <= 0.f)
-          hasShield = false;
-      }
 
       window.clear(sf::Color::Black);
 
-      drawArena(window, uiOffset, animTime);
+      drawArena(window, ui_offset_value, animation_time);
 
-      // Draw orbs
       drawOrbs(window, orbs);
 
-      // Draw powerups
-      for (auto &pu : powerups) {
-        if (!pu.active)
+      int draw_pu_index = 0;
+      while (draw_pu_index < (int)powerups_list.size()) {
+        if (powerups_list[draw_pu_index].active == false) {
+          draw_pu_index = draw_pu_index + 1;
           continue;
-        switch (pu.type) {
-        case PowerupType::Health:
-          drawHealthPowerup(window, pu.pos, animTime);
-          break;
-        case PowerupType::Power:
-          drawPowerPowerup(window, pu.pos, animTime);
-          break;
-        case PowerupType::Shield:
-          drawShieldPowerup(window, pu.pos, animTime);
-          break;
         }
+        if (powerups_list[draw_pu_index].type == PowerupType::Health) {
+          drawHealthPowerup(window, powerups_list[draw_pu_index].pos, animation_time);
+        }
+        else if (powerups_list[draw_pu_index].type == PowerupType::Power) {
+          drawPowerPowerup(window, powerups_list[draw_pu_index].pos, animation_time);
+        }
+        else if (powerups_list[draw_pu_index].type == PowerupType::Shield) {
+          drawShieldPowerup(window, powerups_list[draw_pu_index].pos, animation_time);
+        }
+        draw_pu_index = draw_pu_index + 1;
       }
 
-      // Animated chomping Pac-Man draw
-      drawPacman(window, pacman.pos, pacman.color, pacman.currentDir, animTime);
+      drawPacman(window, pacman.pos, pacman.color, pacman.currentDir, animation_time);
 
-      // Draw ghosts
-      drawGhostsWrapper(window, ghosts, animTime);
+      drawGhostsWrapper(window, ghosts, animation_time);
 
-      // Draw shield aura around Pac-Man if active
-      if (hasShield)
-        drawShieldAura(window, pacman.pos, animTime);
+      if (shield_is_active == true) {
+        drawShieldAura(window, pacman.pos, animation_time);
+      }
 
-      // Draw score and lives HUD
-      drawScore(window, font, score, lives);
+      drawScore(window, font, current_score, number_of_lives);
 
       window.display();
     }
 
-    // Show victory / game-over screen if window is still open
     if (window.isOpen()) {
-      bool won = (gameState == GameState::GameWon);
-      EndScreen endScreen(font, won);
-      EndChoice choice = endScreen.run(window);
+      bool did_win = false;
+      if (current_game_state == GameState::GameWon) {
+        did_win = true;
+      }
 
-      if (choice == EndChoice::PlayAgain) {
-        // Re-open the window if it was closed by the end screen
-        if (!window.isOpen()) {
-          window.create(sf::VideoMode(sf::Vector2u(mapW * (unsigned)TILE_SIZE,
-                                                   mapH * (unsigned)TILE_SIZE +
-                                                       (unsigned)uiOffset)),
+      EndScreen end_screen(font, did_win);
+      EndChoice player_choice = end_screen.run(window);
+
+      if (player_choice == EndChoice::PlayAgain) {
+        if (window.isOpen() == false) {
+          window.create(sf::VideoMode(sf::Vector2u(map_width_variable * (unsigned)TILE_SIZE,
+                                                   map_height_variable * (unsigned)TILE_SIZE +
+                                                       (unsigned)ui_offset_value)),
                         "Pac-Man Core");
         }
-        continue; // restart the outer loop
+        continue;
       } else {
-        keepPlaying = false;
+        keep_playing_flag = false;
       }
     } else {
-      keepPlaying = false;
+      keep_playing_flag = false;
     }
   }
+
+
   return 0;
 }

@@ -1,4 +1,4 @@
-// ghosts_com.h
+
 #pragma once
 
 #include "ghost_direction.h"
@@ -8,37 +8,61 @@
 #include <memory>
 
 
-// ─────────────────────────────────────────────
-//  Confused Star Orbit Effect
-// ─────────────────────────────────────────────
 inline void drawConfusedStars(sf::RenderWindow &window, sf::Vector2f ghostPos,
                               float animTime) {
-  sf::Vector2f center = ghostPos + sf::Vector2f(0, -15.0f);
-  float orbitR = 8.0f, sr = 2.8f;
-  for (int i = 0; i < 3; ++i) {
-    float angle = animTime * 5.0f + i * (2 * 3.14159f / 3.0f);
-    sf::Vector2f sp = center + sf::Vector2f(std::cos(angle) * orbitR,
-                                            std::sin(angle) * orbitR * 0.45f);
-    sf::VertexArray star(sf::PrimitiveType::Triangles, 24);
-    sf::Color sc(255, 230, 0);
-    for (int j = 0; j < 8; ++j) {
+  sf::Vector2f center_point;
+  center_point.x = ghostPos.x + 0;
+  center_point.y = ghostPos.y + -15.0f;
+
+  float orbit_radius_temp = 8.0f;
+  float star_radius_temp = 2.8f;
+
+  int star_number = 0;
+  while (star_number < 3) {
+    float angle_temp = animTime * 5.0f + star_number * (2 * 3.14159f / 3.0f);
+
+    sf::Vector2f star_position;
+    star_position.x = center_point.x + std::cos(angle_temp) * orbit_radius_temp;
+    star_position.y = center_point.y + std::sin(angle_temp) * orbit_radius_temp * 0.45f;
+
+    sf::VertexArray star_triangles(sf::PrimitiveType::Triangles, 24);
+    sf::Color star_color(255, 230, 0);
+
+    int j = 0;
+    while (j < 8) {
       float a1 = j * 2 * 3.14159f / 8.0f;
       float a2 = (j + 1) * 2 * 3.14159f / 8.0f;
-      float r1 = (j % 2 == 0) ? sr : sr * 0.4f;
-      float r2 = ((j + 1) % 2 == 0) ? sr : sr * 0.4f;
-      star[j * 3 + 0] = sf::Vertex{sp, sc};
-      star[j * 3 + 1] = sf::Vertex{
-          sp + sf::Vector2f(std::cos(a1) * r1, std::sin(a1) * r1), sc};
-      star[j * 3 + 2] = sf::Vertex{
-          sp + sf::Vector2f(std::cos(a2) * r2, std::sin(a2) * r2), sc};
+
+      float r1 = star_radius_temp;
+      if (j % 2 != 0) {
+        r1 = star_radius_temp * 0.4f;
+      }
+      float r2 = star_radius_temp;
+      if ((j + 1) % 2 != 0) {
+        r2 = star_radius_temp * 0.4f;
+      }
+
+      star_triangles[j * 3 + 0] = sf::Vertex{star_position, star_color};
+
+      sf::Vector2f p1;
+      p1.x = star_position.x + std::cos(a1) * r1;
+      p1.y = star_position.y + std::sin(a1) * r1;
+      star_triangles[j * 3 + 1] = sf::Vertex{p1, star_color};
+
+      sf::Vector2f p2;
+      p2.x = star_position.x + std::cos(a2) * r2;
+      p2.y = star_position.y + std::sin(a2) * r2;
+      star_triangles[j * 3 + 2] = sf::Vertex{p2, star_color};
+
+      j = j + 1;
     }
-    window.draw(star);
+    window.draw(star_triangles);
+
+    star_number = star_number + 1;
   }
 }
 
-// ─────────────────────────────────────────────
-//  Abstract Base Ghost Class
-// ─────────────────────────────────────────────
+
 class Ghost {
 public:
   sf::Vector2f pos;
@@ -52,15 +76,24 @@ public:
   int ghostID = 0;
 
   explicit Ghost(sf::Color c) : color(c) {}
+
   virtual ~Ghost() = default;
 
   sf::Vector2f getFinalTargetTile(int gx, int gy, sf::Vector2f pacWorldPos,
                                   sf::Vector2f pacTilePos, Direction pacDir,
                                   sf::Vector2f scatterTile, float tileSize) {
-    if (respawning)
-      return {14.f, 11.f};
-    if (gy >= 11 && gy <= 15 && gx >= 10 && gx <= 17)
-      return {14.f, 9.f};
+    if (respawning == true) {
+      sf::Vector2f respawn_target;
+      respawn_target.x = 14.f;
+      respawn_target.y = 11.f;
+      return respawn_target;
+    }
+    if (gy >= 11 && gy <= 15 && gx >= 10 && gx <= 17) {
+      sf::Vector2f exit_target;
+      exit_target.x = 14.f;
+      exit_target.y = 9.f;
+      return exit_target;
+    }
     return getSpecificTargetTile(pacWorldPos, pacTilePos, pacDir, scatterTile,
                                  tileSize);
   }
@@ -75,21 +108,21 @@ protected:
                                              float tileSize) = 0;
 };
 
-// ─────────────────────────────────────────────
-//  Game Logic Helpers
-// ─────────────────────────────────────────────
 
 inline sf::Vector2f getScatterTarget(int ghostID) {
-  switch (ghostID) {
-  case 0:
+  if (ghostID == 0) {
     return sf::Vector2f(26.f, 1.f);
-  case 1:
+  }
+  else if (ghostID == 1) {
     return sf::Vector2f(1.f, 1.f);
-  case 2:
+  }
+  else if (ghostID == 2) {
     return sf::Vector2f(26.f, 27.f);
-  case 3:
+  }
+  else if (ghostID == 3) {
     return sf::Vector2f(1.f, 27.f);
-  default:
+  }
+  else {
     return sf::Vector2f(1.f, 1.f);
   }
 }
@@ -98,121 +131,186 @@ inline void moveGhost(std::shared_ptr<Ghost> &ghost, float spd, float dt,
                       float uiOffset, unsigned mapW, sf::Vector2f targetTile) {
   int gx = (int)(ghost->pos.x / TILE_SIZE);
   int gy = (int)((ghost->pos.y - uiOffset) / TILE_SIZE);
-  sf::Vector2f tc(gx * TILE_SIZE + TILE_SIZE / 2,
-                  gy * TILE_SIZE + TILE_SIZE / 2 + uiOffset);
-  sf::Vector2f toC = tc - ghost->pos;
-  sf::Vector2f cDir = getDirectionVector(ghost->currentDir);
-  bool towards = (toC.x * cDir.x + toC.y * cDir.y) > 0;
 
-  if (calcDist(ghost->pos, tc) < 0.1f ||
-      (towards && calcDist(ghost->pos, tc) <= spd * dt)) {
-    ghost->pos = tc;
-    Direction bestDir = Direction::None;
-    float bestDist = 999999.0f;
-    Direction dirs[] = {Direction::Up, Direction::Down, Direction::Left,
-                        Direction::Right};
-    sf::Vector2f dirVecs[] = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+  sf::Vector2f tile_center;
+  tile_center.x = gx * TILE_SIZE + TILE_SIZE / 2;
+  tile_center.y = gy * TILE_SIZE + TILE_SIZE / 2 + uiOffset;
 
-    Direction reverseDir = Direction::None;
-    if (ghost->currentDir == Direction::Up)
-      reverseDir = Direction::Down;
-    if (ghost->currentDir == Direction::Down)
-      reverseDir = Direction::Up;
-    if (ghost->currentDir == Direction::Left)
-      reverseDir = Direction::Right;
-    if (ghost->currentDir == Direction::Right)
-      reverseDir = Direction::Left;
+  sf::Vector2f to_center;
+  to_center.x = tile_center.x - ghost->pos.x;
+  to_center.y = tile_center.y - ghost->pos.y;
 
-    // Forced random direction when confused logic
-    bool chosen = false;
-    if (ghost->confused && !ghost->respawning) {
-      std::vector<Direction> validDirs;
-      for (int i = 0; i < 4; i++) {
-        if (dirs[i] == reverseDir && ghost->currentDir != Direction::None)
-          continue;
-        int nextX = gx + (int)dirVecs[i].x;
-        int nextY = gy + (int)dirVecs[i].y;
-        if (!isWall(nextX, nextY, true))
-          validDirs.push_back(dirs[i]);
-      }
-      if (!validDirs.empty()) {
-        bestDir = validDirs[std::rand() % validDirs.size()];
-        chosen = true;
-      }
-    }
+  sf::Vector2f current_dir_vec = getDirectionVector(ghost->currentDir);
 
-    if (!chosen) {
-      for (int i = 0; i < 4; i++) {
-        if (dirs[i] == reverseDir && ghost->currentDir != Direction::None)
-          continue;
-        int nextX = gx + (int)dirVecs[i].x;
-        int nextY = gy + (int)dirVecs[i].y;
-        if (!isWall(nextX, nextY, true)) {
-          float newDist =
-              std::hypot(targetTile.x - nextX, targetTile.y - nextY);
-          if (newDist < bestDist) {
-            bestDist = newDist;
-            bestDir = dirs[i];
-          }
-        }
-      }
-    }
-
-    if (bestDir == Direction::None)
-      bestDir = reverseDir;
-    ghost->currentDir = bestDir;
-    ghost->pos += getDirectionVector(ghost->currentDir) * spd * dt;
-  } else {
-    ghost->pos += cDir * spd * dt;
+  float dot_product = to_center.x * current_dir_vec.x + to_center.y * current_dir_vec.y;
+  bool moving_towards = false;
+  if (dot_product > 0) {
+    moving_towards = true;
   }
 
-  if (ghost->pos.x < 0)
-    ghost->pos.x += mapW * TILE_SIZE;
-  if (ghost->pos.x >= (float)mapW * TILE_SIZE)
-    ghost->pos.x -= mapW * TILE_SIZE;
+
+  float dist = calcDist(ghost->pos, tile_center);
+
+  bool should_snap = false;
+  if (dist < 0.1f) {
+    should_snap = true;
+  }
+  if (moving_towards == true && dist <= spd * dt) {
+    should_snap = true;
+  }
+
+  if (should_snap == true) {
+    ghost->pos = tile_center;
+
+    Direction best_direction = Direction::None;
+    float best_distance = 999999.0f;
+
+    Direction all_directions[4];
+    all_directions[0] = Direction::Up;
+    all_directions[1] = Direction::Down;
+    all_directions[2] = Direction::Left;
+    all_directions[3] = Direction::Right;
+
+    sf::Vector2f direction_vectors[4];
+    direction_vectors[0] = sf::Vector2f(0, -1);
+    direction_vectors[1] = sf::Vector2f(0, 1);
+    direction_vectors[2] = sf::Vector2f(-1, 0);
+    direction_vectors[3] = sf::Vector2f(1, 0);
+
+    Direction reverse_direction = Direction::None;
+    if (ghost->currentDir == Direction::Up) {
+      reverse_direction = Direction::Down;
+    }
+    if (ghost->currentDir == Direction::Down) {
+      reverse_direction = Direction::Up;
+    }
+    if (ghost->currentDir == Direction::Left) {
+      reverse_direction = Direction::Right;
+    }
+    if (ghost->currentDir == Direction::Right) {
+      reverse_direction = Direction::Left;
+    }
+
+    bool already_chosen = false;
+    if (ghost->confused == true && ghost->respawning == false) {
+      std::vector<Direction> valid_directions_list;
+      int i = 0;
+      while (i < 4) {
+        if (all_directions[i] == reverse_direction && ghost->currentDir != Direction::None) {
+          i = i + 1;
+          continue;
+        }
+        int next_x = gx + (int)direction_vectors[i].x;
+        int next_y = gy + (int)direction_vectors[i].y;
+        if (isWall(next_x, next_y, true) == false) {
+          valid_directions_list.push_back(all_directions[i]);
+        }
+        i = i + 1;
+      }
+      if (valid_directions_list.size() > 0) {
+        int random_index = std::rand() % (int)valid_directions_list.size();
+        best_direction = valid_directions_list[random_index];
+        already_chosen = true;
+      }
+    }
+
+    if (already_chosen == false) {
+      int i = 0;
+      while (i < 4) {
+        if (all_directions[i] == reverse_direction && ghost->currentDir != Direction::None) {
+          i = i + 1;
+          continue;
+        }
+        int next_x = gx + (int)direction_vectors[i].x;
+        int next_y = gy + (int)direction_vectors[i].y;
+        if (isWall(next_x, next_y, true) == false) {
+          float diff_x = targetTile.x - next_x;
+          float diff_y = targetTile.y - next_y;
+          float new_distance = std::sqrt(diff_x * diff_x + diff_y * diff_y);
+          if (new_distance < best_distance) {
+            best_distance = new_distance;
+            best_direction = all_directions[i];
+          }
+        }
+        i = i + 1;
+      }
+    }
+
+    if (best_direction == Direction::None) {
+      best_direction = reverse_direction;
+    }
+
+    ghost->currentDir = best_direction;
+
+    sf::Vector2f move_vec = getDirectionVector(ghost->currentDir);
+    ghost->pos.x = ghost->pos.x + move_vec.x * spd * dt;
+    ghost->pos.y = ghost->pos.y + move_vec.y * spd * dt;
+  } else {
+    ghost->pos.x = ghost->pos.x + current_dir_vec.x * spd * dt;
+    ghost->pos.y = ghost->pos.y + current_dir_vec.y * spd * dt;
+  }
+
+  if (ghost->pos.x < 0) {
+    ghost->pos.x = ghost->pos.x + mapW * TILE_SIZE;
+  }
+  if (ghost->pos.x >= (float)mapW * TILE_SIZE) {
+    ghost->pos.x = ghost->pos.x - mapW * TILE_SIZE;
+  }
 }
 
 inline void updateGhosts(std::vector<std::shared_ptr<Ghost>> &ghosts,
                          const Entity &pacman, float dt, float uiOffset,
                          float globalTime) {
-  bool scatterMode =
-      (std::fmod(globalTime, 27.0f) < 7.0f); // 7 sec scatter, 20 sec chase
-  sf::Vector2f pacTilePos(pacman.pos.x / TILE_SIZE,
-                          (pacman.pos.y - uiOffset) / TILE_SIZE);
-  int mapW = (int)baseMap[0].size();
+  float time_in_cycle = std::fmod(globalTime, 27.0f);
+  bool scatter_mode_flag = false;
+  if (time_in_cycle < 7.0f) {
+    scatter_mode_flag = true;
+  }
 
-  for (auto &ghost : ghosts) {
-    if (ghost->respawning) {
-      ghost->respawnTimer -= dt;
-      if (ghost->respawnTimer <= 0.f) {
-        ghost->respawning = false;
-        ghost->confused = false;
+  sf::Vector2f pac_tile_pos;
+  pac_tile_pos.x = pacman.pos.x / TILE_SIZE;
+  pac_tile_pos.y = (pacman.pos.y - uiOffset) / TILE_SIZE;
+
+  int map_width_int = (int)baseMap[0].size();
+
+  int ghost_index = 0;
+  while (ghost_index < (int)ghosts.size()) {
+    if (ghosts[ghost_index]->respawning == true) {
+      ghosts[ghost_index]->respawnTimer = ghosts[ghost_index]->respawnTimer - dt;
+      if (ghosts[ghost_index]->respawnTimer <= 0.f) {
+        ghosts[ghost_index]->respawning = false;
+        ghosts[ghost_index]->confused = false;
       }
-    } else if (ghost->confused) {
-      ghost->confuseTimer -= dt;
-      if (ghost->confuseTimer <= 0.f)
-        ghost->confused = false;
+    } else if (ghosts[ghost_index]->confused == true) {
+      ghosts[ghost_index]->confuseTimer = ghosts[ghost_index]->confuseTimer - dt;
+      if (ghosts[ghost_index]->confuseTimer <= 0.f) {
+        ghosts[ghost_index]->confused = false;
+      }
     }
 
-    int gx = (int)(ghost->pos.x / TILE_SIZE);
-    int gy = (int)((ghost->pos.y - uiOffset) / TILE_SIZE);
+    int gx = (int)(ghosts[ghost_index]->pos.x / TILE_SIZE);
+    int gy = (int)((ghosts[ghost_index]->pos.y - uiOffset) / TILE_SIZE);
 
-    sf::Vector2f targetTile;
-    if (scatterMode && !ghost->respawning) {
-      targetTile = getScatterTarget(ghost->ghostID);
+    sf::Vector2f target_tile_temp;
+    if (scatter_mode_flag == true && ghosts[ghost_index]->respawning == false) {
+      target_tile_temp = getScatterTarget(ghosts[ghost_index]->ghostID);
     } else {
-      targetTile = ghost->getFinalTargetTile(
-          gx, gy, pacman.pos, pacTilePos, pacman.currentDir,
-          getScatterTarget(ghost->ghostID), TILE_SIZE);
+      target_tile_temp = ghosts[ghost_index]->getFinalTargetTile(
+          gx, gy, pacman.pos, pac_tile_pos, pacman.currentDir,
+          getScatterTarget(ghosts[ghost_index]->ghostID), TILE_SIZE);
     }
 
-    float ghostSpeed = PACMAN_SPEED * 0.85f * ghost->getSpeedMultiplier();
-    if (ghost->confused)
-      ghostSpeed *= 0.5f;
-    if (ghost->respawning)
-      ghostSpeed *= 2.0f;
+    float ghost_speed_temp = PACMAN_SPEED * 0.85f * ghosts[ghost_index]->getSpeedMultiplier();
+    if (ghosts[ghost_index]->confused == true) {
+      ghost_speed_temp = ghost_speed_temp * 0.5f;
+    }
+    if (ghosts[ghost_index]->respawning == true) {
+      ghost_speed_temp = ghost_speed_temp * 2.0f;
+    }
 
-    moveGhost(ghost, ghostSpeed, dt, uiOffset, mapW, targetTile);
+    moveGhost(ghosts[ghost_index], ghost_speed_temp, dt, uiOffset, map_width_int, target_tile_temp);
+
+    ghost_index = ghost_index + 1;
   }
 }
 
@@ -220,23 +318,28 @@ inline bool checkGhostCollision(Entity &pacman,
                                 std::vector<std::shared_ptr<Ghost>> &ghosts,
                                 bool hasShield, bool hasPower, sf::Sound &sEat,
                                 sf::Sound &sDth, int &score) {
-  for (auto &ghost : ghosts) {
-    float dist = calcDist(pacman.pos, ghost->pos);
-    if (dist < TILE_SIZE * 0.6f) {
-      if (ghost->respawning) {
-        continue; // Cannot hit a respawning ghost
+  int i = 0;
+  while (i < (int)ghosts.size()) {
+    float distance_temp = calcDist(pacman.pos, ghosts[i]->pos);
+
+    if (distance_temp < TILE_SIZE * 0.6f) {
+      if (ghosts[i]->respawning == true) {
+        i = i + 1;
+        continue;
       }
-      if (ghost->confused) {
+      if (ghosts[i]->confused == true) {
         sEat.play();
-        score += 200;
-        ghost->respawning = true;
-        ghost->respawnTimer = 5.0f;
-        ghost->confused = false;
-      } else if (!hasShield) {
+        score = score + 200;
+        ghosts[i]->respawning = true;
+        ghosts[i]->respawnTimer = 5.0f;
+        ghosts[i]->confused = false;
+      } else if (hasShield == false) {
         sDth.play();
         return true;
       }
     }
+
+    i = i + 1;
   }
   return false;
 }
@@ -244,37 +347,43 @@ inline bool checkGhostCollision(Entity &pacman,
 inline void drawGhostsWrapper(sf::RenderWindow &window,
                               const std::vector<std::shared_ptr<Ghost>> &ghosts,
                               float animTime) {
-  for (const auto &ghost : ghosts) {
-    if (ghost->respawning) {
-      drawGhostFace(window, ghost->pos, ghost->currentDir, 0);
+  int i = 0;
+  while (i < (int)ghosts.size()) {
+    if (ghosts[i]->respawning == true) {
+      drawGhostFace(window, ghosts[i]->pos, ghosts[i]->currentDir, 0);
+      i = i + 1;
       continue;
     }
 
-    int mood = 0; // 0 normal, 1 angry, 2 frightened
-    sf::Color drawCol = ghost->color;
+    int mood_temp = 0;
+    sf::Color draw_color_temp = ghosts[i]->color;
 
-    if (ghost->confused) {
-      mood = 2; // Frightened
-      drawCol = sf::Color::Blue;
+    if (ghosts[i]->confused == true) {
+      mood_temp = 2;
+      draw_color_temp = sf::Color::Blue;
     } else {
-      mood = 1; // Angry
+      mood_temp = 1;
     }
 
-    drawGhost(window, ghost->pos, drawCol, ghost->currentDir, mood, animTime,
+    drawGhost(window, ghosts[i]->pos, draw_color_temp, ghosts[i]->currentDir, mood_temp, animTime,
               TILE_SIZE);
 
-    if (ghost->confused) {
-      drawConfusedStars(window, ghost->pos, animTime);
+    if (ghosts[i]->confused == true) {
+      drawConfusedStars(window, ghosts[i]->pos, animTime);
     }
+
+    i = i + 1;
   }
 }
 
 inline void frightenGhosts(std::vector<std::shared_ptr<Ghost>> &ghosts,
                            float duration = 8.0f) {
-  for (auto &ghost : ghosts) {
-    if (!ghost->respawning) {
-      ghost->confused = true;
-      ghost->confuseTimer = duration;
+  int i = 0;
+  while (i < (int)ghosts.size()) {
+    if (ghosts[i]->respawning == false) {
+      ghosts[i]->confused = true;
+      ghosts[i]->confuseTimer = duration;
     }
+    i = i + 1;
   }
 }

@@ -72,18 +72,34 @@ inline std::vector<std::string> baseMap = {
 
 inline bool isWall(int x, int y, bool isGhost = false)
 {
-  int mapW = (int)baseMap[0].size();
+  int map_width_temp = (int)baseMap[0].size();
 
-  while (x < 0)
-    x += mapW;
-  while (x >= mapW)
-    x -= mapW;
+  while (x < 0) {
+    x = x + map_width_temp;
+  }
+  while (x >= map_width_temp) {
+    x = x - map_width_temp;
+  }
 
-  if (y < 0 || y >= (int)baseMap.size())
+  if (y < 0 || y >= (int)baseMap.size()) {
     return true;
+  }
 
-  if (isGhost && baseMap[y][x] == '-') return false;
-  return baseMap[y][x] == '#' || baseMap[y][x] == '-';
+
+  if (isGhost == true) {
+    if (baseMap[y][x] == '-') {
+      return false;
+    }
+  }
+
+  if (baseMap[y][x] == '#') {
+    return true;
+  }
+  if (baseMap[y][x] == '-') {
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -92,25 +108,54 @@ inline sf::VertexArray createThickArc(sf::Vector2f center, float radius,
                                       float thickness, float startAngle,
                                       float endAngle, sf::Color color)
 {
-  const int points = 15;
-  sf::VertexArray arc(sf::PrimitiveType::Triangles, (points - 1) * 6);
-  for (int i = 0; i < points - 1; ++i)
+  const int number_of_points = 15;
+
+  sf::VertexArray arc_shape(sf::PrimitiveType::Triangles, (number_of_points - 1) * 6);
+
+
+  int i = 0;
+  while (i < number_of_points - 1)
   {
-    float a1 = startAngle + (endAngle - startAngle) * (i / (float)(points - 1));
-    float a2 = startAngle + (endAngle - startAngle) * ((i + 1) / (float)(points - 1));
-    float r1 = a1 * 3.14159f / 180.0f, r2 = a2 * 3.14159f / 180.0f;
-    sf::Vector2f d1(std::cos(r1), std::sin(r1)), d2(std::cos(r2), std::sin(r2));
-    sf::Vector2f p1o = center + d1 * radius,
-                 p1i = center + d1 * (radius - thickness);
-    sf::Vector2f p2o = center + d2 * radius,
-                 p2i = center + d2 * (radius - thickness);
+    float angle_1_temp = startAngle + (endAngle - startAngle) * (i / (float)(number_of_points - 1));
+    float angle_2_temp = startAngle + (endAngle - startAngle) * ((i + 1) / (float)(number_of_points - 1));
+
+    float radians_1 = angle_1_temp * 3.14159f / 180.0f;
+    float radians_2 = angle_2_temp * 3.14159f / 180.0f;
+
+    sf::Vector2f direction_1;
+    direction_1.x = std::cos(radians_1);
+    direction_1.y = std::sin(radians_1);
+
+    sf::Vector2f direction_2;
+    direction_2.x = std::cos(radians_2);
+    direction_2.y = std::sin(radians_2);
+
+    sf::Vector2f outer_point_1;
+    outer_point_1.x = center.x + direction_1.x * radius;
+    outer_point_1.y = center.y + direction_1.y * radius;
+
+    sf::Vector2f inner_point_1;
+    inner_point_1.x = center.x + direction_1.x * (radius - thickness);
+    inner_point_1.y = center.y + direction_1.y * (radius - thickness);
+
+    sf::Vector2f outer_point_2;
+    outer_point_2.x = center.x + direction_2.x * radius;
+    outer_point_2.y = center.y + direction_2.y * radius;
+
+    sf::Vector2f inner_point_2;
+    inner_point_2.x = center.x + direction_2.x * (radius - thickness);
+    inner_point_2.y = center.y + direction_2.y * (radius - thickness);
+
     int idx = i * 6;
-    arc[idx + 0] = sf::Vertex{p1i, color};
-    arc[idx + 1] = sf::Vertex{p1o, color};
-    arc[idx + 2] = sf::Vertex{p2o, color};
-    arc[idx + 3] = sf::Vertex{p1i, color};
-    arc[idx + 4] = sf::Vertex{p2o, color};
-    arc[idx + 5] = sf::Vertex{p2i, color};
+    arc_shape[idx + 0] = sf::Vertex{inner_point_1, color};
+    arc_shape[idx + 1] = sf::Vertex{outer_point_1, color};
+    arc_shape[idx + 2] = sf::Vertex{outer_point_2, color};
+    arc_shape[idx + 3] = sf::Vertex{inner_point_1, color};
+    arc_shape[idx + 4] = sf::Vertex{outer_point_2, color};
+    arc_shape[idx + 5] = sf::Vertex{inner_point_2, color};
+
+    i = i + 1;
   }
-  return arc;
+
+  return arc_shape;
 }

@@ -1,46 +1,68 @@
 #pragma once
 
-
 #include "globals.h"
-
+#include <iostream>
 
 class EndScreen {
 public:
+  const sf::Font &m_font;
+  bool m_hasWon;
+  int m_selectedIndex;
+
   EndScreen(const sf::Font &font, bool hasWon)
       : m_font(font), m_hasWon(hasWon), m_selectedIndex(0) {}
 
   EndChoice run(sf::RenderWindow &window) {
-    sf::Text mainMessage(m_font);
-    mainMessage.setString(m_hasWon ? "Hurray, you won!"
-                                   : "Skill issue, you lost");
-    mainMessage.setCharacterSize(54);
-    mainMessage.setFillColor(sf::Color::Yellow);
-    mainMessage.setStyle(sf::Text::Bold);
-    sf::FloatRect msgBounds = mainMessage.getLocalBounds();
-    mainMessage.setOrigin({msgBounds.position.x + msgBounds.size.x / 2.f,
-                           msgBounds.position.y + msgBounds.size.y / 2.f});
-    mainMessage.setPosition(
-        {window.getSize().x / 2.f, window.getSize().y * 0.3f});
+    sf::Text main_message_text(m_font);
 
-    const int OPTION_COUNT = 2;
-    std::string optionLabels[OPTION_COUNT] = {"Play Again", "Quit"};
-    sf::Text optionTexts[OPTION_COUNT] = {sf::Text(m_font), sf::Text(m_font)};
-    sf::RectangleShape optionBoxes[OPTION_COUNT];
+    if (m_hasWon == true) {
+      main_message_text.setString("Hurray, you won!");
+    } else {
+      main_message_text.setString("Skill issue, you lost");
+    }
 
-    for (int i = 0; i < OPTION_COUNT; ++i) {
-      optionTexts[i].setString(optionLabels[i]);
-      optionTexts[i].setCharacterSize(34);
-      optionTexts[i].setFillColor(sf::Color::White);
-      sf::FloatRect tb = optionTexts[i].getLocalBounds();
-      optionTexts[i].setOrigin(
-          {tb.position.x + tb.size.x / 2.f, tb.position.y + tb.size.y / 2.f});
-      float yPos = window.getSize().y * 0.55f + (i * 70.f);
-      optionTexts[i].setPosition({window.getSize().x / 2.f, yPos});
-      sf::FloatRect gb = optionTexts[i].getGlobalBounds();
-      optionBoxes[i].setSize({gb.size.x + 60.f, gb.size.y + 24.f});
-      optionBoxes[i].setOrigin(
-          {optionBoxes[i].getSize().x / 2.f, optionBoxes[i].getSize().y / 2.f});
-      optionBoxes[i].setPosition({window.getSize().x / 2.f, yPos});
+    main_message_text.setCharacterSize(54);
+    main_message_text.setFillColor(sf::Color::Yellow);
+    main_message_text.setStyle(sf::Text::Bold);
+
+    sf::FloatRect msg_bounds = main_message_text.getLocalBounds();
+    float origin_x = msg_bounds.position.x + msg_bounds.size.x / 2.f;
+    float origin_y = msg_bounds.position.y + msg_bounds.size.y / 2.f;
+    main_message_text.setOrigin({origin_x, origin_y});
+    main_message_text.setPosition({window.getSize().x / 2.f, window.getSize().y * 0.3f});
+
+
+    int NUMBER_OF_OPTIONS = 2;
+
+    std::string option_labels[2];
+    option_labels[0] = "Play Again";
+    option_labels[1] = "Quit";
+
+    sf::Text option_texts[2] = {sf::Text(m_font), sf::Text(m_font)};
+    sf::RectangleShape option_boxes[2];
+
+    int setup_counter = 0;
+    while (setup_counter < NUMBER_OF_OPTIONS) {
+      option_texts[setup_counter].setString(option_labels[setup_counter]);
+      option_texts[setup_counter].setCharacterSize(34);
+      option_texts[setup_counter].setFillColor(sf::Color::White);
+
+      sf::FloatRect text_bounds = option_texts[setup_counter].getLocalBounds();
+      float text_origin_x = text_bounds.position.x + text_bounds.size.x / 2.f;
+      float text_origin_y = text_bounds.position.y + text_bounds.size.y / 2.f;
+      option_texts[setup_counter].setOrigin({text_origin_x, text_origin_y});
+
+      float y_position = window.getSize().y * 0.55f + (setup_counter * 70.f);
+      option_texts[setup_counter].setPosition({window.getSize().x / 2.f, y_position});
+
+      sf::FloatRect global_bounds = option_texts[setup_counter].getGlobalBounds();
+      float box_width = global_bounds.size.x + 60.f;
+      float box_height = global_bounds.size.y + 24.f;
+      option_boxes[setup_counter].setSize({box_width, box_height});
+      option_boxes[setup_counter].setOrigin({box_width / 2.f, box_height / 2.f});
+      option_boxes[setup_counter].setPosition({window.getSize().x / 2.f, y_position});
+
+      setup_counter = setup_counter + 1;
     }
 
     while (window.isOpen()) {
@@ -50,44 +72,55 @@ public:
           return EndChoice::Quit;
         }
         if (const auto *kp = ev->getIf<sf::Event::KeyPressed>()) {
-          if (kp->code == sf::Keyboard::Key::Up)
-            m_selectedIndex =
-                (m_selectedIndex - 1 + OPTION_COUNT) % OPTION_COUNT;
-          else if (kp->code == sf::Keyboard::Key::Down)
-            m_selectedIndex = (m_selectedIndex + 1) % OPTION_COUNT;
+          if (kp->code == sf::Keyboard::Key::Up) {
+            m_selectedIndex = m_selectedIndex - 1;
+            if (m_selectedIndex < 0) {
+              m_selectedIndex = m_selectedIndex + NUMBER_OF_OPTIONS;
+            }
+          }
+          else if (kp->code == sf::Keyboard::Key::Down) {
+            m_selectedIndex = m_selectedIndex + 1;
+            if (m_selectedIndex >= NUMBER_OF_OPTIONS) {
+              m_selectedIndex = m_selectedIndex - NUMBER_OF_OPTIONS;
+            }
+          }
           else if (kp->code == sf::Keyboard::Key::Enter) {
-            if (m_selectedIndex == 0)
+            if (m_selectedIndex == 0) {
               return EndChoice::PlayAgain;
+            }
             window.close();
             return EndChoice::Quit;
           }
         }
       }
 
-      for (int i = 0; i < OPTION_COUNT; ++i) {
-        if (i == m_selectedIndex) {
-          optionBoxes[i].setFillColor(sf::Color(0, 0, 210, 230));
-          optionBoxes[i].setOutlineThickness(2.f);
-          optionBoxes[i].setOutlineColor(sf::Color(120, 170, 255));
+      int draw_counter = 0;
+      while (draw_counter < NUMBER_OF_OPTIONS) {
+        if (draw_counter == m_selectedIndex) {
+          option_boxes[draw_counter].setFillColor(sf::Color(0, 0, 210, 230));
+          option_boxes[draw_counter].setOutlineThickness(2.f);
+          option_boxes[draw_counter].setOutlineColor(sf::Color(120, 170, 255));
         } else {
-          optionBoxes[i].setFillColor(sf::Color::Transparent);
-          optionBoxes[i].setOutlineThickness(0.f);
+          option_boxes[draw_counter].setFillColor(sf::Color::Transparent);
+          option_boxes[draw_counter].setOutlineThickness(0.f);
         }
+        draw_counter = draw_counter + 1;
       }
 
       window.clear(sf::Color::Black);
-      window.draw(mainMessage);
-      for (int i = 0; i < OPTION_COUNT; ++i) {
-        window.draw(optionBoxes[i]);
-        window.draw(optionTexts[i]);
+
+      window.draw(main_message_text);
+
+      int i = 0;
+      while (i < NUMBER_OF_OPTIONS) {
+        window.draw(option_boxes[i]);
+        window.draw(option_texts[i]);
+        i = i + 1;
       }
+
       window.display();
     }
+
     return EndChoice::Quit;
   }
-
-private:
-  const sf::Font &m_font;
-  bool m_hasWon;
-  int m_selectedIndex;
 };
